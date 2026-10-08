@@ -43,18 +43,18 @@ def profiles(env):
         if not ssid:
             continue
         password = env.get(prefix + 'PASSWORD', '')
-        host = env.get(prefix + 'PROXY_HOST', 'gateway')
-        port = int(env.get(prefix + 'PROXY_PORT', '1082'))
+        host = env.get(prefix + 'PROXY_HOST', '').strip()
+        port = int(env.get(prefix + 'PROXY_PORT') or '1082') if host else 0
         if not 1 <= len(ssid.encode()) <= 32 or len(password.encode()) > 63:
             raise ValueError(f'Invalid Wi-Fi length in slot {slot}')
-        if host != 'gateway':
+        if host and host != 'gateway':
             try:
                 addr = ipaddress.IPv4Address(host)
             except ValueError:
                 raise ValueError(f'Invalid proxy address in slot {slot}') from None
             if int(addr) >> 24 in (0, 127) or int(addr) >> 24 >= 224:
                 raise ValueError(f'Invalid proxy address in slot {slot}')
-        if not 1 <= port <= 65535:
+        if host and not 1 <= port <= 65535:
             raise ValueError(f'Invalid proxy port in slot {slot}')
         result.append((dict(slot=slot, ssid=ssid, host=host, port=port), password))
     if len({p['ssid'] for p, _ in result}) != len(result):
@@ -100,7 +100,10 @@ def apply(env, selected):
         # Opening native USB may reset the board; wait until its console is ready.
         time.sleep(12)
         for profile, _ in items:
-            command(device, 'proxy.set=' + json.dumps(profile, ensure_ascii=False), '@proxy.ok')
+            if profile['host']:
+                command(device, 'proxy.set=' + json.dumps(profile, ensure_ascii=False), '@proxy.ok')
+            else:
+                command(device, 'proxy.direct=' + json.dumps({'ssid': profile['ssid']}, ensure_ascii=False), '@proxy.ok')
         profile, password = current
         command(device, 'wifi.ssid=' + profile['ssid'], 'cmd wifi.ssid=')
         command(device, 'wifi.pass=' + password, 'cmd wifi.pass ->')

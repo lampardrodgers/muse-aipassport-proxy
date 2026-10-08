@@ -50,15 +50,15 @@ bool config_erase_key(const char *key) { store[index_for(key)][0]=0; return true
 int main(void) {
     muse_proxy_profile_t p;
     strcpy(current,"phone A");
-    assert(!muse_proxy_profile_current(&p));
+    assert(muse_proxy_route_current(&p)==MUSE_ROUTE_DIRECT);
     assert(passport_proxy_command("proxy.set={\"slot\":1,\"ssid\":\"phone A\",\"host\":\"172.20.10.1\",\"port\":1082}",true));
     assert(muse_proxy_profile_current(&p) && p.port==1082);
     assert(!strcmp(p.host,"172.20.10.1"));
     passport_proxy_command("proxy.set={\"slot\":2,\"ssid\":\"手机 B\",\"host\":\"192.168.43.1\",\"port\":7890}",true);
     strcpy(current,"手机 B");
     assert(muse_proxy_profile_current(&p) && p.port==7890);
-    connected=false; assert(!muse_proxy_profile_current(&p)); connected=true;
-    strcpy(current,"unknown"); assert(!muse_proxy_profile_current(&p));
+    connected=false; assert(muse_proxy_route_current(&p)==MUSE_ROUTE_BLOCKED); connected=true;
+    strcpy(current,"unknown"); assert(muse_proxy_route_current(&p)==MUSE_ROUTE_DIRECT);
     strcpy(current,"phone A "); assert(!muse_proxy_profile_current(&p));
     char saved[512]; strcpy(saved,store[0]);
     const char *invalid[]={
@@ -81,14 +81,19 @@ int main(void) {
     assert(muse_proxy_profile_current(&p) && p.port==1082);
     passport_proxy_command("proxy.delete=1",true);
     assert(!muse_proxy_profile_current(&p));
-    strcpy(store[0],"{broken"); assert(!muse_proxy_profile_current(&p));
+    strcpy(store[0],"{broken"); assert(muse_proxy_route_current(&p)==MUSE_ROUTE_BLOCKED); store[0][0]=0;
     assert(!passport_proxy_command("heap",true));
     passport_proxy_command("proxy.set={\"slot\":3,\"ssid\":\"phone A\",\"host\":\"gateway\",\"port\":1082}",true);
     gateway_ip=inet_addr("172.20.10.1");
     assert(muse_proxy_profile_current(&p) && !strcmp(p.host,"172.20.10.1"));
     gateway_ip=inet_addr("192.168.43.1");
     assert(muse_proxy_profile_current(&p) && !strcmp(p.host,"192.168.43.1"));
-    gateway_ip=0; assert(!muse_proxy_profile_current(&p));
+    gateway_ip=0; assert(muse_proxy_route_current(&p)==MUSE_ROUTE_BLOCKED);
+    passport_proxy_command("proxy.direct={\"ssid\":\"phone A\"}",true);
+    assert(muse_proxy_route_current(&p)==MUSE_ROUTE_DIRECT);
+    strcpy(current,"手机 B");
+    assert(muse_proxy_route_current(&p)==MUSE_ROUTE_PROXY);
+
 
     return 0;
 }

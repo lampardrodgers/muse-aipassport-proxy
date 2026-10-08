@@ -163,9 +163,23 @@ esp_err_t muse_tls_connect_proxy(const char *host, int port, int timeout_ms, esp
     int proxy_port = MUSE_HTTP_PROXY_PORT;
 #if MUSE_PROXY_PROFILES
     muse_proxy_profile_t profile;
-    if (!muse_proxy_profile_current(&profile)) {
-        ESP_LOGW(TAG, "Muse connection blocked: no proxy for connected Wi-Fi");
+    muse_proxy_route_t route = muse_proxy_route_current(&profile);
+    if (route == MUSE_ROUTE_BLOCKED) {
+        ESP_LOGW(TAG, "Muse connection blocked: Wi-Fi unavailable or invalid proxy configuration");
         return ESP_FAIL;
+    }
+    if (route == MUSE_ROUTE_DIRECT) {
+        ESP_LOGI(TAG, "HTTPS direct -> %s:%d", host, port);
+        esp_tls_t *tls = esp_tls_init();
+        if (!tls) return ESP_ERR_NO_MEM;
+        esp_tls_cfg_t cfg = { .crt_bundle_attach = esp_crt_bundle_attach,
+                              .timeout_ms = timeout_ms };
+        if (esp_tls_conn_new_sync(host, (int)strlen(host), port, &cfg, tls) != 1) {
+            esp_tls_conn_destroy(tls);
+            return ESP_FAIL;
+        }
+        *out = tls;
+        return ESP_OK;
     }
     proxy_host = profile.host;
     proxy_port = profile.port;

@@ -18,7 +18,8 @@ class ConfigureTest(unittest.TestCase):
     def test_password_is_literal_not_shell(self):
         env = self.parse('WIFI_1_SSID="Phone A"\nWIFI_1_PASSWORD=\'a # $HOME $(echo nope)\'\n')
         self.assertEqual(env['WIFI_1_PASSWORD'], 'a # $HOME $(echo nope)')
-        self.assertEqual(cfg.profiles(env)[0][0]['host'], 'gateway')
+        self.assertEqual(cfg.profiles(env)[0][0]['host'], '')
+        self.assertEqual(cfg.profiles(env)[0][0]['port'], 0)
 
     def test_reject_serial_command_injection(self):
         with self.assertRaises(ValueError):
@@ -40,7 +41,7 @@ class ConfigureTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             cfg.profiles({'WIFI_1_SSID': '中' * 11})
         with self.assertRaises(ValueError):
-            cfg.profiles({'WIFI_1_SSID': 'A', 'WIFI_1_PROXY_PORT': '65536'})
+            cfg.profiles({'WIFI_1_SSID': 'A', 'WIFI_1_PROXY_HOST': 'gateway', 'WIFI_1_PROXY_PORT': '65536'})
 
     def test_usb_password_ack_without_echoing_password(self):
         class FakeSerial:

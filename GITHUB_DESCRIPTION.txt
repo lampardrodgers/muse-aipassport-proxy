@@ -1,1 +1,1 @@
-FoloToy AI Passport 的 Muse 固件：支持手机热点 HTTP 代理、按 Wi-Fi 切换代理、两行中文分页及低内存回复接收优化。
+FoloToy AI Passport 的 Muse 固件：无代理配置时直连、按 Wi-Fi 匹配 HTTP 代理，支持两行中文分页及低内存回复接收优化。
